@@ -25,6 +25,7 @@ import org.apache.guacamole.GuacamoleException;
 import org.apache.guacamole.net.auth.AbstractAuthenticationProvider;
 import org.apache.guacamole.net.auth.AuthenticatedUser;
 import org.apache.guacamole.net.auth.Credentials;
+import org.apache.guacamole.net.auth.UserContext;
 
 /**
  * Guacamole authentication backend which authenticates users using an
@@ -33,6 +34,8 @@ import org.apache.guacamole.net.auth.Credentials;
  * extension.
  */
 public class OpenIDAuthenticationProvider extends AbstractAuthenticationProvider {
+
+    public static final String ROOT_CONNECTION_GROUP = "ROOT";
 
     /**
      * Injector which will manage the object graph of this authentication
@@ -72,4 +75,12 @@ public class OpenIDAuthenticationProvider extends AbstractAuthenticationProvider
 
     }
 
+    @Override
+    public UserContext getUserContext(AuthenticatedUser authenticatedUser)
+            throws GuacamoleException {
+
+        AuthenticationProviderService authProviderService = injector.getInstance(AuthenticationProviderService.class);
+        return authProviderService.getUserContext(authenticatedUser);
+
+    }
 }

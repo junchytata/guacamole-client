@@ -24,6 +24,7 @@ import java.util.Set;
 import org.apache.guacamole.net.auth.AbstractAuthenticatedUser;
 import org.apache.guacamole.net.auth.AuthenticationProvider;
 import org.apache.guacamole.net.auth.Credentials;
+import org.jose4j.jwt.JwtClaims;
 
 /**
  * An openid-specific implementation of AuthenticatedUser, associating a
@@ -50,6 +51,11 @@ public class AuthenticatedUser extends AbstractAuthenticatedUser {
     private Set<String> effectiveGroups;
 
     /**
+     * ID Token claims.
+     */
+    private JwtClaims claims;
+
+    /**
      * Initializes this AuthenticatedUser using the given username and
      * credentials.
      *
@@ -62,10 +68,15 @@ public class AuthenticatedUser extends AbstractAuthenticatedUser {
      * @param effectiveGroups
      *     The groups of the user that was authenticated.
      */
-    public void init(String username, Credentials credentials, Set<String> effectiveGroups) {
+    public void init(String username, Credentials credentials, Set<String> effectiveGroups, JwtClaims claims) {
         this.credentials = credentials;
         this.effectiveGroups = effectiveGroups;
+        this.claims = claims;
         setIdentifier(username);
+    }
+
+    public JwtClaims getClaims() {
+        return claims;
     }
 
     @Override

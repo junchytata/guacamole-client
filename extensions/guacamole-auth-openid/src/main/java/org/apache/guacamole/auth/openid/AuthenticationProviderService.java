@@ -21,15 +21,13 @@ package org.apache.guacamole.auth.openid;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import java.util.Arrays;
-import java.util.Set;
-import javax.servlet.http.HttpServletRequest;
+import org.apache.guacamole.GuacamoleException;
 import org.apache.guacamole.auth.openid.conf.ConfigurationService;
 import org.apache.guacamole.auth.openid.form.TokenField;
 import org.apache.guacamole.auth.openid.token.NonceService;
 import org.apache.guacamole.auth.openid.token.TokenValidationService;
 import org.apache.guacamole.auth.openid.user.AuthenticatedUser;
-import org.apache.guacamole.GuacamoleException;
+import org.apache.guacamole.auth.openid.user.OpenIDUserContext;
 import org.apache.guacamole.form.Field;
 import org.apache.guacamole.language.TranslatableMessage;
 import org.apache.guacamole.net.auth.Credentials;
@@ -38,6 +36,10 @@ import org.apache.guacamole.net.auth.credentials.GuacamoleInvalidCredentialsExce
 import org.jose4j.jwt.JwtClaims;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.Arrays;
+import java.util.Set;
 
 /**
  * Service providing convenience functions for the OpenID AuthenticationProvider
@@ -75,6 +77,12 @@ public class AuthenticationProviderService {
     private Provider<AuthenticatedUser> authenticatedUserProvider;
 
     /**
+     * Provider for UserContext objects.
+     */
+    @Inject
+    private Provider<OpenIDUserContext> userContextProvider;
+
+    /**
      * Returns an AuthenticatedUser representing the user authenticated by the
      * given credentials.
      *
@@ -94,13 +102,14 @@ public class AuthenticationProviderService {
 
         String username = null;
         Set<String> groups = null;
+        JwtClaims claims = null;
 
         // Validate OpenID token in request, if present, and derive username
         HttpServletRequest request = credentials.getRequest();
         if (request != null) {
             String token = request.getParameter(TokenField.PARAMETER_NAME);
             if (token != null) {
-                JwtClaims claims = tokenService.validateToken(token);
+                claims = tokenService.validateToken(token);
                 if (claims != null) {
                     username = tokenService.processUsername(claims);
                     groups = tokenService.processGroups(claims);
@@ -114,7 +123,7 @@ public class AuthenticationProviderService {
 
             // Create corresponding authenticated user
             AuthenticatedUser authenticatedUser = authenticatedUserProvider.get();
-            authenticatedUser.init(username, credentials, groups);
+            authenticatedUser.init(username, credentials, groups, claims);
             return authenticatedUser;
 
         }
@@ -139,4 +148,33 @@ public class AuthenticationProviderService {
 
     }
 
+    /**
+     * Returns a UserContext object initialized with data accessible to the
+     * given AuthenticatedUser.
+     *
+     * @param authenticatedUser
+     *     The AuthenticatedUser to retrieve data for.
+     *
+     * @return
+     *     A UserContext object initialized with data accessible to the given
+     *     AuthenticatedUser.
+     *
+     * @throws GuacamoleException
+     *     If the UserContext cannot be created due to an error.
+     */
+    public OpenIDUserContext getUserContext(org.apache.guacamole.net.auth.AuthenticatedUser authenticatedUser)
+            throws GuacamoleException {
+
+        if (authenticatedUser instanceof AuthenticatedUser) {
+
+            JwtClaims claims = ((AuthenticatedUser) authenticatedUser).getClaims();
+
+            // Build user context by claims
+            OpenIDUserContext userContext = userContextProvider.get();
+            userContext.init(authenticatedUser, claims);
+            return userContext;
+        }
+        return null;
+
+    }
 }
